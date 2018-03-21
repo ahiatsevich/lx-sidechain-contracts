@@ -172,7 +172,6 @@ contract LXValidatorSet is Owned, InnerSet {
   public
   only_owner
   {
-    require(_delegate != 0x0);
     delegate = LXValidatorSetDelegateInterface(_delegate);
 
     DelegateUpdated(delegate);
