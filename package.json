@@ -1,0 +1,39 @@
+{
+  "name": "lx-sidechain-contracts",
+  "version": "0.0.1",
+  "description": "LX Sidechain Smart Contracts",
+  "main": "truffle.js",
+  "scripts": {
+    "test": "truffle test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ahiatsevich/lx-sidechain-contracts.git"
+  },
+  "keywords": [
+    "LX",
+    "Chronobank",
+    "sidechain",
+    "solidity",
+    "parity"
+  ],
+  "author": "Aliaksei Hiatsevich",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ahiatsevich/lx-sidechain-contracts/issues"
+  },
+  "homepage": "https://github.com/ahiatsevich/lx-sidechain-contracts#readme",
+  "dependencies": {
+    "ganache-cli": "6.1.0",
+    "truffle": "4.1.3",
+    "truffle-hdwallet-provider": "mikefluff/truffle-hdwallet-provider#7a2eccca1ba17c235a3ef258914ca74ea5f13014",
+    "abi-decoder": "^1.0.9"
+  },
+  "devDependencies": {
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-flow": "^6.23.0",
+    "babel-register": "^6.26.0",
+    "solidity-coverage": "^0.4.9"
+  }
+}
