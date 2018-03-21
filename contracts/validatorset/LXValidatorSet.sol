@@ -88,13 +88,17 @@ contract LXValidatorSet is Owned, InnerSet {
     InitiateChange(block.blockhash(block.number - 1), getPending());
 
     if (address(delegate) != 0x0) {
-
+      delegate.initiateChange();
     }
   }
 
   function finalizeChange() public only_outer {
     validators = pending;
     ChangeFinalized(validators);
+
+    if (address(delegate) != 0x0) {
+      delegate.finalizeChange();
+    }
   }
 
   // OWNER FUNCTIONS
@@ -105,6 +109,10 @@ contract LXValidatorSet is Owned, InnerSet {
     pendingStatus[_validator].index = pending.length;
     pending.push(_validator);
     initiateChange();
+
+    if (address(delegate) != 0x0) {
+      delegate.addValidator(_validator);
+    }
   }
 
   // Remove a validator.
@@ -116,10 +124,18 @@ contract LXValidatorSet is Owned, InnerSet {
     delete pendingStatus[_validator].index;
     pendingStatus[_validator].isIn = false;
     initiateChange();
+
+    if (address(delegate) != 0x0) {
+      delegate.removeValidator(_validator);
+    }
   }
 
   function setRecentBlocks(uint _recentBlocks) public only_owner {
     recentBlocks = _recentBlocks;
+
+    if (address(delegate) != 0x0) {
+      delegate.setRecentBlocks(_recentBlocks);
+    }
   }
 
   // MISBEHAVIOUR HANDLING
@@ -131,6 +147,10 @@ contract LXValidatorSet is Owned, InnerSet {
   is_recent(_blockNumber)
   {
     Report(msg.sender, _validator, true);
+
+    if (address(delegate) != 0x0) {
+      delegate.reportMalicious(_validator, _blockNumber, _proof);
+    }
   }
 
   // Report that a validator has misbehaved in a benign way.
@@ -141,6 +161,10 @@ contract LXValidatorSet is Owned, InnerSet {
   is_recent(_blockNumber)
   {
     Report(msg.sender, _validator, false);
+
+    if (address(delegate) != 0x0) {
+      delegate.reportBenign(_validator, _blockNumber);
+    }
   }
 
   // EXTEND DEFAULT FUNCTIONALITY
