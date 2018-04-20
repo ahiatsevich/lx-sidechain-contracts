@@ -1,7 +1,8 @@
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.23;
 
 import "../common/Owned.sol";
 import "../validatorset/LXValidatorSetDelegateInterface.sol";
+
 
 contract LXValidatorSetDelegate is LXValidatorSetDelegateInterface, Owned {
   address public validatorSet;

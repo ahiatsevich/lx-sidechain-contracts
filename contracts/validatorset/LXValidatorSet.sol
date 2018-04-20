@@ -12,7 +12,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.23;
 
 import "../common/Owned.sol";
 import "./LXValidatorSetDelegateInterface.sol";
@@ -104,7 +104,7 @@ contract LXValidatorSet is Owned, InnerSet {
   // OWNER FUNCTIONS
 
   // Add a validator.
-  function addValidator(address _validator) public only_owner is_not_pending(_validator) {
+  function addValidator(address _validator) public onlyOwner is_not_pending(_validator) {
     pendingStatus[_validator].isIn = true;
     pendingStatus[_validator].index = pending.length;
     pending.push(_validator);
@@ -116,7 +116,7 @@ contract LXValidatorSet is Owned, InnerSet {
   }
 
   // Remove a validator.
-  function removeValidator(address _validator) public only_owner is_pending(_validator) {
+  function removeValidator(address _validator) public onlyOwner is_pending(_validator) {
     pending[pendingStatus[_validator].index] = pending[pending.length - 1];
     delete pending[pending.length - 1];
     pending.length--;
@@ -130,7 +130,7 @@ contract LXValidatorSet is Owned, InnerSet {
     }
   }
 
-  function setRecentBlocks(uint _recentBlocks) public only_owner {
+  function setRecentBlocks(uint _recentBlocks) public onlyOwner {
     recentBlocks = _recentBlocks;
 
     if (address(delegate) != 0x0) {
@@ -143,7 +143,7 @@ contract LXValidatorSet is Owned, InnerSet {
   // Called when a validator should be removed.
   function reportMalicious(address _validator, uint _blockNumber, bytes _proof)
   public
-  only_owner
+  onlyOwner
   is_recent(_blockNumber)
   {
     Report(msg.sender, _validator, true);
@@ -156,7 +156,7 @@ contract LXValidatorSet is Owned, InnerSet {
   // Report that a validator has misbehaved in a benign way.
   function reportBenign(address _validator, uint _blockNumber)
   public
-  only_owner
+  onlyOwner
   is_validator(_validator)
   is_recent(_blockNumber)
   {
@@ -170,7 +170,7 @@ contract LXValidatorSet is Owned, InnerSet {
   // EXTEND DEFAULT FUNCTIONALITY
   function setDelegate(address _delegate)
   public
-  only_owner
+  onlyOwner
   {
     delegate = LXValidatorSetDelegateInterface(_delegate);
 
@@ -180,7 +180,7 @@ contract LXValidatorSet is Owned, InnerSet {
 
   function setExtention(address _extention)
   public
-  only_owner
+  onlyOwner
   {
     require(_extention != 0x0);
     extention = _extention;

@@ -12,10 +12,11 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.23;
 
 import "../common/Owned.sol";
 import "./ValidatorSet.sol";
+
 
 contract OuterSet is Owned, ValidatorSet {
 	// System address, used by the block sealer.
@@ -39,7 +40,7 @@ contract OuterSet is Owned, ValidatorSet {
 	// Was the last validator change finalized.
 	bool public finalized;
 
-	function setInner(address _inner) public only_owner {
+	function setInner(address _inner) public onlyOwner {
 		innerSet = InnerSet(_inner);
 	}
 

@@ -1,27 +1,39 @@
-//! The owned contract.
-//!
-//! Copyright 2016 Gavin Wood, Parity Technologies Ltd.
-//!
-//! Licensed under the Apache License, Version 2.0 (the "License");
-//! you may not use this file except in compliance with the License.
-//! You may obtain a copy of the License at
-//!
-//!     http://www.apache.org/licenses/LICENSE-2.0
-//!
-//! Unless required by applicable law or agreed to in writing, software
-//! distributed under the License is distributed on an "AS IS" BASIS,
-//! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//! See the License for the specific language governing permissions and
-//! limitations under the License.
+pragma solidity ^0.4.23;
 
-pragma solidity ^0.4.15;
 
+/**
+* @title Ownable
+* @dev The Ownable contract has an owner address, and provides basic authorization control
+* functions, this simplifies the implementation of "user permissions".
+*/
 contract Owned {
-	modifier only_owner { require(msg.sender == owner); _; }
+	address public owner;
 
-	event NewOwner(address indexed old, address indexed current);
+	event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-	function setOwner(address _new) public only_owner { NewOwner(owner, _new); owner = _new; }
+	/**
+	* @dev The Ownable constructor sets the original `owner` of the contract to the sender
+	* account.
+	*/
+	constructor() public {
+		owner = msg.sender;
+	}
 
-	address public owner = msg.sender;
+	/**
+	* @dev Throws if called by any account other than the owner.
+	*/
+	modifier onlyOwner() {
+		require(msg.sender == owner);
+		_;
+	}
+
+	/**
+	* @dev Allows the current owner to transfer control of the contract to a newOwner.
+	* @param newOwner The address to transfer ownership to.
+	*/
+	function transferOwnership(address newOwner) public onlyOwner {
+		require(newOwner != address(0));
+		emit OwnershipTransferred(owner, newOwner);
+		owner = newOwner;
+	}
 }
