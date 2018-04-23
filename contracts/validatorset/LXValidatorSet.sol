@@ -15,202 +15,168 @@
 pragma solidity ^0.4.23;
 
 import "../common/Owned.sol";
+import "../common/BaseRouter.sol";
 import "./LXValidatorSetDelegateInterface.sol";
 import "./RelaySet.sol";
 
 // Owner can add or remove validators.
 
-contract LXValidatorSet is Owned, InnerSet {
-  // EVENTS
-  event Report(address indexed reporter, address indexed reported, bool indexed malicious);
-  event InitiateChange(bytes32 indexed _parent_hash, address[] _new_set);
-  event ChangeFinalized(address[] current_set);
+contract LXValidatorSet is Owned, ValidatorSet, BaseRouter {
+    // EVENTS
+    event Report(address indexed reporter, address indexed reported, bool indexed malicious);
+    event ChangeFinalized(address[] current_set);
 
-  event BackendUpdated(address backend);
-  event DelegateUpdated(address delegate);
+    // System address, used by the block sealer.
+    address constant SYSTEM_ADDRESS = 0xfffffffffffffffffffffffffffffffffffffffe;
+    uint public recentBlocks = 20;
 
-  // System address, used by the block sealer.
-  uint public recentBlocks = 20;
+    address public backendAddress;
 
-  modifier is_validator(address _someone) {
-    if (pendingStatus[_someone].isIn) { _; }
-  }
-
-  modifier is_pending(address _someone) {
-    require(pendingStatus[_someone].isIn);
-    _;
-  }
-
-  modifier is_not_pending(address _someone) {
-    require(!pendingStatus[_someone].isIn);
-    _;
-  }
-
-  modifier is_recent(uint _blockNumber) {
-    require(block.number <= _blockNumber + recentBlocks);
-    _;
-  }
-
-  struct AddressStatus {
-    bool isIn;
-    uint index;
-  }
-
-  // Current list of addresses entitled to participate in the consensus.
-  address[] validators;
-  address[] pending;
-  mapping(address => AddressStatus) pendingStatus;
-
-  address public extention;
-  LXValidatorSetDelegateInterface public delegate;
-
-  function InnerOwnedSet(address[] _initial) public {
-    pending = _initial;
-    for (uint i = 0; i < _initial.length - 1; i++) {
-      pendingStatus[_initial[i]].isIn = true;
-      pendingStatus[_initial[i]].index = i;
+    modifier only_system_and_not_finalized() {
+        require(msg.sender != SYSTEM_ADDRESS || finalized);
+        _;
     }
-    validators = pending;
-  }
 
-  // Called to determine the current set of validators.
-  function getValidators() constant public returns (address[]) {
-    return validators;
-  }
-
-  function getPending() constant public returns (address[]) {
-    return pending;
-  }
-
-  // Log desire to change the current list.
-  function initiateChange() private {
-    outerSet.initiateChange(block.blockhash(block.number - 1), getPending());
-    InitiateChange(block.blockhash(block.number - 1), getPending());
-
-    if (address(delegate) != 0x0) {
-      delegate.initiateChange();
+    modifier when_finalized() {
+        require(!finalized);
+        _;
     }
-  }
 
-  function finalizeChange() public only_outer {
-    validators = pending;
-    ChangeFinalized(validators);
-
-    if (address(delegate) != 0x0) {
-      delegate.finalizeChange();
+    modifier is_validator(address _someone) {
+        if (pendingStatus[_someone].isIn) { _; }
     }
-  }
 
-  // OWNER FUNCTIONS
-
-  // Add a validator.
-  function addValidator(address _validator) public onlyOwner is_not_pending(_validator) {
-    pendingStatus[_validator].isIn = true;
-    pendingStatus[_validator].index = pending.length;
-    pending.push(_validator);
-    initiateChange();
-
-    if (address(delegate) != 0x0) {
-      delegate.addValidator(_validator);
+    modifier is_pending(address _someone) {
+        require(pendingStatus[_someone].isIn);
+        _;
     }
-  }
 
-  // Remove a validator.
-  function removeValidator(address _validator) public onlyOwner is_pending(_validator) {
-    pending[pendingStatus[_validator].index] = pending[pending.length - 1];
-    delete pending[pending.length - 1];
-    pending.length--;
-    // Reset address status.
-    delete pendingStatus[_validator].index;
-    pendingStatus[_validator].isIn = false;
-    initiateChange();
-
-    if (address(delegate) != 0x0) {
-      delegate.removeValidator(_validator);
+    modifier is_not_pending(address _someone) {
+        require(!pendingStatus[_someone].isIn);
+        _;
     }
-  }
 
-  function setRecentBlocks(uint _recentBlocks) public onlyOwner {
-    recentBlocks = _recentBlocks;
-
-    if (address(delegate) != 0x0) {
-      delegate.setRecentBlocks(_recentBlocks);
+    modifier is_recent(uint _blockNumber) {
+        require(block.number <= _blockNumber + recentBlocks);
+        _;
     }
-  }
 
-  // MISBEHAVIOUR HANDLING
-
-  // Called when a validator should be removed.
-  function reportMalicious(address _validator, uint _blockNumber, bytes _proof)
-  public
-  onlyOwner
-  is_recent(_blockNumber)
-  {
-    Report(msg.sender, _validator, true);
-
-    if (address(delegate) != 0x0) {
-      delegate.reportMalicious(_validator, _blockNumber, _proof);
+    struct AddressStatus {
+        bool isIn;
+        uint index;
     }
-  }
 
-  // Report that a validator has misbehaved in a benign way.
-  function reportBenign(address _validator, uint _blockNumber)
-  public
-  onlyOwner
-  is_validator(_validator)
-  is_recent(_blockNumber)
-  {
-    Report(msg.sender, _validator, false);
+    // Current list of addresses entitled to participate in the consensus.
+    address[] validators;
+    address[] pending;
+    mapping(address => AddressStatus) pendingStatus;
+    // Was the last validator change finalized. Implies validators == pending
+    bool public finalized;
 
-    if (address(delegate) != 0x0) {
-      delegate.reportBenign(_validator, _blockNumber);
+    function LXValidatorSet(address[] _initial) public {
+        pending = _initial;
+        for (uint i = 0; i < _initial.length - 1; i++) {
+            pendingStatus[_initial[i]].isIn = true;
+            pendingStatus[_initial[i]].index = i;
+        }
+        validators = pending;
     }
-  }
 
-  // EXTEND DEFAULT FUNCTIONALITY
-  function setDelegate(address _delegate)
-  public
-  onlyOwner
-  {
-    delegate = LXValidatorSetDelegateInterface(_delegate);
-
-    DelegateUpdated(delegate);
-  }
-
-
-  function setExtention(address _extention)
-  public
-  onlyOwner
-  {
-    require(_extention != 0x0);
-    extention = _extention;
-
-    BackendUpdated(extention);
-  }
-
-  /**
-  * Resolves asset implementation contract for the caller and forwards there transaction data,
-  * along with the value. This allows for proxy interface growth.
-  */
-  function () payable {
-    address backend = extention;
-    assembly {
-      let calldataMemoryOffset := mload(0x40)
-      mstore(0x40, add(calldataMemoryOffset, calldatasize))
-      calldatacopy(calldataMemoryOffset, 0x0, calldatasize)
-      let r := delegatecall(sub(gas, 10000), backend, calldataMemoryOffset, calldatasize, 0, 0)
-
-      let returndataMemoryOffset := mload(0x40)
-      mstore(0x40, add(returndataMemoryOffset, returndatasize))
-      returndatacopy(returndataMemoryOffset, 0x0, returndatasize)
-
-      switch r
-      case 1 {
-        return(returndataMemoryOffset, returndatasize)
-      }
-      default {
-        revert(0, 0)
-      }
+    // Called to determine the current set of validators.
+    function getValidators() view public returns (address[]) {
+        return validators;
     }
-  }
+
+    function getPending() view public returns (address[]) {
+        return pending;
+    }
+
+    // Log desire to change the current list.
+    function initiateChange() private when_finalized {
+        finalized = false;
+        InitiateChange(block.blockhash(block.number - 1), getPending());
+    }
+
+    function finalizeChange()
+    public
+    only_system_and_not_finalized
+    {
+        validators = pending;
+        finalized = true;
+        ChangeFinalized(getValidators());
+    }
+
+    // OWNER FUNCTIONS
+
+    // Add a validator.
+    function addValidator(address _validator)
+    public
+    onlyOwner
+    is_not_pending(_validator)
+    {
+        pendingStatus[_validator].isIn = true;
+        pendingStatus[_validator].index = pending.length;
+        pending.push(_validator);
+        initiateChange();
+    }
+
+    // Remove a validator.
+    function removeValidator(address _validator)
+    public
+    onlyOwner
+    is_pending(_validator)
+    {
+        pending[pendingStatus[_validator].index] = pending[pending.length - 1];
+        delete pending[pending.length - 1];
+        pending.length--;
+        // Reset address status.
+        delete pendingStatus[_validator].index;
+        pendingStatus[_validator].isIn = false;
+        initiateChange();
+    }
+
+    // MISBEHAVIOUR HANDLING
+
+    // Called when a validator should be removed.
+    function reportMalicious(address _validator, uint _blockNumber, bytes _proof)
+    public
+    onlyOwner
+    is_recent(_blockNumber)
+    {
+        Report(msg.sender, _validator, true);
+    }
+
+    // Report that a validator has misbehaved in a benign way.
+    function reportBenign(address _validator, uint _blockNumber)
+    public
+    onlyOwner
+    is_validator(_validator)
+    is_recent(_blockNumber)
+    {
+        Report(msg.sender, _validator, false);
+    }
+
+    // EXTEND DEFAULT FUNCTIONALITY
+
+    function setRecentBlocks(uint _recentBlocks)
+    public
+    onlyOwner
+    {
+        recentBlocks = _recentBlocks;
+    }
+
+    function setBackend(address _backend)
+    public
+    onlyOwner
+    {
+        backendAddress = _backend;
+    }
+
+    function backend()
+    internal
+    view
+    returns (address)
+    {
+        return backendAddress;
+    }
 }

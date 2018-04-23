@@ -12,7 +12,7 @@ module.exports = {
       gasPrice: 10000000000
     },
     development: {
-      host: "127.0.0.1",
+      host: "localhost",
       port: 8545,
       network_id: "*" // Match any network id
     },
@@ -24,9 +24,13 @@ module.exports = {
     },
     lx: {
       network_id: 456719,
-      provider: new HDWalletProvider(getWallet(),'password','https://private-full-geth-node.chronobank.io'), // TODO
+      provider: new HDWalletProvider(getWallet(),'password','http://localhost:8545'),
       port: 8545,
       gas: 4700000
+    },
+    sidechain: {
+      network_id: "*",
+      provider: new HDWalletProvider(getWallet(),'password','http://127.0.0.1:8541')
     }
   }
 };

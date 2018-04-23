@@ -6,11 +6,11 @@ import "./BlockReward.sol";
 import "./LXBlockRewardProvider.sol";
 
 
-contract LXBlockRewardProxy is BlockReward, Owned, BaseRouter {
-    address constant SYSTEM_ADDRESS = 0xffffFFFfFFffffffffffffffFfFFFfffFFFfFFfE;
-    uint constant DEFAULT_BLOCK_REWARD = 5 * 10*18;
+contract LXBlockReward is BlockReward, Owned, BaseRouter {
+    address constant SYSTEM_ADDRESS = 0xfffffffffffffffffffffffffffffffffffffffe;
+    uint constant DEFAULT_BLOCK_REWARD = 5 * 10**18;
 
-    address public backend;
+    address backendAddress;
     address public rewardProvider;
 
     // produce rewards for the given benefactors, with corresponding reward codes.
@@ -35,11 +35,15 @@ contract LXBlockRewardProxy is BlockReward, Owned, BaseRouter {
     }
 
     function setBackend(address _backend) onlyOwner external {
-        backend = _backend;
+        backendAddress = _backend;
     }
 
     function setRewardProvider(address _rewardProvider) onlyOwner external {
         rewardProvider = _rewardProvider;
+    }
+
+    function backend() internal view returns (address) {
+        return backendAddress;
     }
 
     modifier onlySystem {
